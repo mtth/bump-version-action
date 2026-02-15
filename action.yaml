@@ -1,0 +1,17 @@
+name: Bump version
+description: |
+  Bump version using semver and conventional commits.
+inputs:
+  custom-bumps:
+    description: |
+      Newline-separated list of bumps and regular expressions to derive the
+      version bump of commits which don't have a title in conventional commit
+      format. This is useful for messages which are automatically generated,
+      for example merges and pass CLI commits. The format of each line is
+      `<bump><space><regex>`.
+    required: false
+    default: |
+      minor ^(Merge|Revert)\s
+runs:
+  using: node20
+  main: index.js
