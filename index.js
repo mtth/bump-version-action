@@ -12,8 +12,8 @@ import os from 'node:os';
 async function main() {
   const client = new ApiClient(
     process.env['GITHUB_API_URL'],
-    process.env['INPUT_TOKEN'],
     process.env['GITHUB_REPOSITORY'],
+    process.env['INPUT_TOKEN'],
   );
 
   const [messages, oldVersion] = await Promise.all([
@@ -60,10 +60,10 @@ export function parseCustomBumps(input) {
 const TAGS_LIMIT = 10;
 
 export class ApiClient {
-  constructor(url, token, repo) {
+  constructor(url, repo, token) {
     this.url = url;
-    this.token = token;
     this.repo = repo;
+    this.token = token;
   }
 
   async fetchLatestTaggedVersion() {
@@ -91,14 +91,24 @@ export class ApiClient {
 
   async createVersionTag(s, sha) {
     console.log(`Creating tag ${s} on ${sha}.`);
-    const res = await fetch(`${this.url}/repos/${this.repo}/tags`, {
+    let url, body;
+    if (isGitHub()) {
+      // GitHub: create a lightweight tag via the git refs API.
+      url = `${this.url}/repos/${this.repo}/git/refs`;
+      body = {ref: 'refs/tags/' + s, sha};
+    } else {
+      // Forgejo: create a tag via the tags API.
+      url = `${this.url}/repos/${this.repo}/tags`;
+      body = {tag_name: s, target: sha};
+    }
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer ' + this.token,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({tag_name: s, target: sha}),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       throw new Error(`Unable to create tag: API status ${res.status}`);
@@ -196,6 +206,10 @@ async function setOutput(n, v) { // Single line only for now
   await appendFile(path, `${n}=${v}${os.EOL}`, 'utf8');
 }
 
-if (true) {
+function isGitHub() {
+  return !process.env['FORGEJO_API_URL'];
+}
+
+if (isGitHub() || import.meta.main) {
   await main();
 }

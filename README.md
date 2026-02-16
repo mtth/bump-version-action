@@ -1,4 +1,4 @@
-# Bump version
+# Bump version action
 
 Automatically create [semver][] tags based on [conventional commit][] messages.
 This action analyzes commit messages from push and pull request events, derives
