@@ -187,7 +187,7 @@ export function deriveVersionBump(messages, customBumps) {
         throw new Error(`Unparseable title: ${title}`);
       }
     }
-    console.log(`\t${bumps[bump]}\t${m}`);
+    console.log(`\t${bump}\t${m}`);
     maxBump = Math.max(bump, maxBump);
   }
   return maxBump;

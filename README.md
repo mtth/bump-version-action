@@ -43,24 +43,19 @@ jobs:
 | `token` | No | `${{ github.token }}` | API token used to create version tags |
 | `custom-bumps` | No | `minor ^(Merge\|Revert)\s` | Newline-separated `<bump> <regex>` pairs for non-conventional commit messages |
 
-The default token works automatically on both Forgejo and GitHub. You only need
-to specify it explicitly if you want to use a different token (e.g. a personal
-access token with broader permissions).
+The default token works automatically in most cases. You only need to specify it
+explicitly if you want to use a different token (e.g. a personal access token
+with broader permissions).
 
 ### Custom bumps
 
 Messages that don't follow conventional commit format are matched against custom
-bump patterns. Each line contains a bump level (`major`, `minor`, or `patch`)
-followed by a space and a regular expression. The first matching pattern wins.
+bump patterns. Each line contains a bump level (`major`, `minor`, `patch`, or
+`noop`) followed by whitespace and a regular expression. The first matching
+pattern wins.
 
-The default value handles auto-generated merge and revert commit messages:
-
-```yaml
-custom-bumps: |
-  minor ^(Merge|Revert)\s
-```
-
-A more detailed example:
+The default value handles auto-generated merge and revert commit messages. You
+can change it to support additional titles, for example:
 
 ```yaml
 - name: Bump version
@@ -69,6 +64,7 @@ A more detailed example:
     custom-bumps: |
       minor ^(Merge|Revert)\s
       patch ^Bump\s
+      noop ^Sync\s
 ```
 
 If no pattern matches a non-conventional message, the action fails with an
