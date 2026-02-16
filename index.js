@@ -119,6 +119,7 @@ export class ApiClient {
 /** Extract commit messages from the action's event's path */
 async function readCommitMessages(p) {
   const str = await readFile(p, 'utf8');
+  console.log(str);
   const data = JSON.parse(str);
   console.log(`Reading commit messages from ${data.action} event.`);
   switch (data.action) {
