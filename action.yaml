@@ -6,7 +6,7 @@ inputs:
     description: |
       API token used to create version tags.
     required: false
-    default: ${{ bgithub.token }}
+    default: ${{ github.token }}
   custom-bumps:
     description: |
       Newline-separated list of bumps and regular expressions to derive the
