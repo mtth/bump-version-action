@@ -23,6 +23,11 @@ async function main() {
   const customBumps = parseCustomBumps(process.env['INPUT_CUSTOM-BUMPS']);
 
   const bump = deriveVersionBump(messages, customBumps);
+  if (!bump) {
+    console.log(`No bump needed, skipping tag creation.`);
+    return
+  }
+
   const newVersion = bumpVersion(oldVersion, bump);
   const tag = formatStableVersion(newVersion, 'v');
   await client.createVersionTag(tag, process.env['GITHUB_SHA']);
@@ -48,7 +53,7 @@ export function parseCustomBumps(input) {
       throw new Error(`Unable to parse custom bump definition: ${trimmed}`);
     }
     const bump = bumps[trimmed.slice(0, i).toUpperCase()];
-    if (!bump) {
+    if (bump == null) {
       throw new Error(`Invalid bump definition: ${trimmed}`);
     }
     tups.push([bump, new RegExp(trimmed.slice(i+1).trim())]);
@@ -118,15 +123,16 @@ export class ApiClient {
 
 /** Extract commit messages from the action's event's path */
 async function readCommitMessages(p) {
+  console.log(`Reading commit messages from event.`);
   const str = await readFile(p, 'utf8');
-  console.log(str);
   const data = JSON.parse(str);
-  console.log(`Reading commit messages from ${data.action} event.`);
   switch (data.action) {
     case 'opened':
     case 'synchronized':
+      // Support pull request for easier debugging.
       return [data.pull_request.title];
-    default: // TODO: Add explicit name for this case
+    default:
+      // Push to branch, etc.
       return data.commits.map((c) => c.message);
   }
 }
@@ -154,11 +160,12 @@ function formatStableVersion(v, prefix='') {
   return `${prefix}${v.major}.${v.minor}.${v.patch}`;
 }
 
-export const bumps = {MAJOR: 3, MINOR: 2, PATCH: 1};
+export const bumps = {MAJOR: 3, MINOR: 2, PATCH: 1, NOOP: 0};
 
 const commitTypePattern = /^([a-z]+)(\([^)]+\))?(!)?:.*/;
 
 export function deriveVersionBump(messages, customBumps) {
+  console.log(`Deriving bump from ${messages.length} commit message(s).`);
   let maxBump = 0;
   for (const m of messages) {
     const title = m.split('\n', 1);
@@ -176,10 +183,11 @@ export function deriveVersionBump(messages, customBumps) {
           break;
         }
       }
-      if (!bump) {
+      if (bump == null) {
         throw new Error(`Unparseable title: ${title}`);
       }
     }
+    console.log(`\t${bumps[bump]}\t${m}`);
     maxBump = Math.max(bump, maxBump);
   }
   return maxBump;
@@ -208,7 +216,7 @@ async function setOutput(n, v) { // Single line only for now
 }
 
 function isGitHub() {
-  return !process.env['FORGEJO_API_URL'];
+  return !!process.env['CI'] && !process.env['FORGEJO_API_URL'];
 }
 
 if (isGitHub() || import.meta.main) {
