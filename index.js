@@ -196,6 +196,6 @@ async function setOutput(n, v) { // Single line only for now
   await appendFile(path, `${n}=${v}${os.EOL}`, 'utf8');
 }
 
-if (import.meta.main) {
+if (true) {
   await main();
 }
