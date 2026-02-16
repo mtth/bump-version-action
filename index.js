@@ -12,7 +12,7 @@ import os from 'node:os';
 async function main() {
   const client = new ApiClient(
     process.env['GITHUB_API_URL'],
-    process.env['GITHUB_TOKEN'],
+    process.env['INPUT_TOKEN'],
     process.env['GITHUB_REPOSITORY'],
   );
 
@@ -69,9 +69,11 @@ export class ApiClient {
   async fetchLatestTaggedVersion() {
     const params = new URLSearchParams();
     params.append('limit', TAGS_LIMIT);
-    params.append('token', this.token);
     const res = await fetch(`${this.url}/repos/${this.repo}/tags?${params}`, {
-      headers: {'Accept': 'application/json'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + this.token,
+      },
     });
     if (!res.ok) {
       throw new Error(`Unable to fetch tags: API status ${res.status}`);
@@ -89,12 +91,11 @@ export class ApiClient {
 
   async createVersionTag(s, sha) {
     console.log(`Creating tag ${s} on ${sha}.`);
-    const params = new URLSearchParams();
-    params.append('token', this.token);
-    const res = await fetch(`${this.url}/repos/${this.repo}/tags?${params}`, {
+    const res = await fetch(`${this.url}/repos/${this.repo}/tags`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
+        'Authorization': 'Bearer ' + this.token,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({tag_name: s, target: sha}),

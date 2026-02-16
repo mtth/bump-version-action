@@ -40,7 +40,12 @@ jobs:
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
+| `token` | No | `${{ bgithub.token }}` | API token used to create version tags |
 | `custom-bumps` | No | `minor ^(Merge\|Revert)\s` | Newline-separated `<bump> <regex>` pairs for non-conventional commit messages |
+
+The default token works automatically on both Forgejo and GitHub. You only need
+to specify it explicitly if you want to use a different token (e.g. a personal
+access token with broader permissions).
 
 ### Custom bumps
 

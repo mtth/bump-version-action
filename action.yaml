@@ -2,6 +2,11 @@ name: Bump version
 description: |
   Bump version using semver and conventional commits.
 inputs:
+  token:
+    description: |
+      API token used to create version tags.
+    required: false
+    default: ${{ bgithub.token }}
   custom-bumps:
     description: |
       Newline-separated list of bumps and regular expressions to derive the
