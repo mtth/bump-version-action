@@ -17,6 +17,11 @@ inputs:
     required: false
     default: |
       minor ^(Merge|Revert)\s
+  ignore-breaking:
+    description: |
+      If true, ignore the breaking change marker (!) when deriving the bump.
+      The default is false, unless the version is pre-1.0.
+    required: false
 runs:
   using: node20
   main: index.js

@@ -1,8 +1,8 @@
 # Bump version action
 
 Automatically create [semver][] tags based on [conventional commit][] messages.
-This action analyzes commit messages from push and pull request events, derives
-the appropriate version bump, and creates a new tag.
+This action analyzes commit messages, derives the appropriate version bump from
+them, and creates a new tag.
 
 ## Usage
 
@@ -27,14 +27,15 @@ jobs:
    format (`<type>[optional scope][!]: <description>`).
 3. The version bump is derived from the **highest severity** across all
    messages:
-   - `!` (breaking change) &rarr; **major**
+   - `!` (breaking change) &rarr; **major**, unless `ignore-breaking` is `true`
    - `feat` &rarr; **minor**
    - Any other conventional type (`fix`, `chore`, `docs`, ...) &rarr; **patch**
 4. Messages that don't match conventional commit format are checked against
    configurable custom bump patterns (see below).
 5. The latest semver tag (e.g. `v1.2.3`) is fetched from the repository and the
    bump is applied to produce the new version.
-6. A new tag is created on the triggering commit's SHA.
+6. On push events, a new tag is created on the triggering commit's SHA. In PRs,
+   the action only logs which tag it would create.
 
 ## Inputs
 
@@ -42,6 +43,7 @@ jobs:
 |-------|----------|---------|-------------|
 | `token` | No | `${{ github.token }}` | API token used to create version tags |
 | `custom-bumps` | No | `minor ^(Merge\|Revert)\s` | Newline-separated `<bump> <regex>` pairs for non-conventional commit messages |
+| `ignore-breaking` | No | `false`, unless pre-1.0 | Ignore the breaking change marker |
 
 The default token works automatically in most cases. You only need to specify it
 explicitly if you want to use a different token (e.g. a personal access token

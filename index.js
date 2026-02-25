@@ -16,27 +16,34 @@ async function main() {
     process.env['INPUT_TOKEN'],
   );
 
-  const [messages, oldVersion] = await Promise.all([
-    readCommitMessages(process.env['GITHUB_EVENT_PATH']),
+  const [change, oldVersion] = await Promise.all([
+    readChange(process.env['GITHUB_EVENT_PATH']),
     client.fetchLatestTaggedVersion(),
   ]);
   const customBumps = parseCustomBumps(process.env['INPUT_CUSTOM-BUMPS']);
+  const ignoreBreaking = parseBoolean(
+    process.env['INPUT_IGNORE-BREAKING'] || (oldVersion.major ? '0' : '1')
+  );
 
-  const bump = deriveVersionBump(messages, customBumps);
+  await setOutput('old-version', formatStableVersion(oldVersion));
+
+  const bump = deriveVersionBump(change.messages, customBumps, ignoreBreaking);
   if (!bump) {
     console.log(`No bump needed, skipping tag creation.`);
     return
   }
 
   const newVersion = bumpVersion(oldVersion, bump);
-  const tag = formatStableVersion(newVersion, 'v');
-  await client.createVersionTag(tag, process.env['GITHUB_SHA']);
-
-  await setOutput('old-version', formatStableVersion(oldVersion));
   await setOutput('new-version', formatStableVersion(newVersion));
-  await setOutput('tag', tag);
 
-  console.log(`Created tag ${tag}.`);
+  const tag = formatStableVersion(newVersion, 'v');
+  if (change.isPR) {
+    console.log(`PR detected, skipping creation of tag ${tag}.`);
+  } else {
+    await client.createVersionTag(tag, process.env['GITHUB_SHA']);
+    await setOutput('tag', tag);
+    console.log(`Created tag ${tag}.`);
+  }
 }
 
 const linePattern = /\r?\n/;
@@ -87,10 +94,11 @@ export class ApiClient {
     for (const tag of tags) {
       const version = parseVersionTag(tag.name);
       if (version) {
-        console.log(`Retrieved latest version tag: ${JSON.stringify(tag)}`);
+        console.log(`Retrieved latest version tag: ${tag.name}`);
         return version;
       }
     }
+    console.log(`No version tag found, assuming version 0.`);
     return {major: 0, minor: 0, patch: 0};
   }
 
@@ -122,7 +130,7 @@ export class ApiClient {
 }
 
 /** Extract commit messages from the action's event's path */
-async function readCommitMessages(p) {
+async function readChange(p) {
   console.log(`Reading commit messages from event.`);
   const str = await readFile(p, 'utf8');
   const data = JSON.parse(str);
@@ -130,10 +138,10 @@ async function readCommitMessages(p) {
     case 'opened':
     case 'synchronized':
       // Support pull request for easier debugging.
-      return [data.pull_request.title];
+      return {isPR: true, messages: [data.pull_request.title]};
     default:
       // Push to branch, etc.
-      return data.commits.map((c) => c.message);
+      return {isPR: false, messages: data.commits.map((c) => c.message)};
   }
 }
 
@@ -164,16 +172,16 @@ export const bumps = {MAJOR: 3, MINOR: 2, PATCH: 1, NOOP: 0};
 
 const commitTypePattern = /^([a-z]+)(\([^)]+\))?(!)?:.*/;
 
-export function deriveVersionBump(messages, customBumps) {
+export function deriveVersionBump(messages, customBumps, ignoreBreaking=false) {
   console.log(`Deriving bump from ${messages.length} commit message(s).`);
   let maxBump = 0;
   for (const m of messages) {
-    const title = m.split('\n', 1);
+    const title = m.split('\n', 1)[0];
     const match = commitTypePattern.exec(title);
     let bump;
     if (match) {
       const [_all, type, _scope, breaking] = match;
-      bump = breaking
+      bump = (breaking && !ignoreBreaking)
         ? bumps.MAJOR
         : type === 'feat' ? bumps.MINOR : bumps.PATCH;
     } else {
@@ -187,7 +195,7 @@ export function deriveVersionBump(messages, customBumps) {
         throw new Error(`Unparseable title: ${title}`);
       }
     }
-    console.log(`\t${bump}\t${m}`);
+    console.log(`\t${bump}\t${title}`);
     maxBump = Math.max(bump, maxBump);
   }
   return maxBump;
@@ -199,6 +207,21 @@ function bumpVersion(v, b) {
     case bumps.MINOR: return {major: v.major, minor: v.minor+1, patch: 0};
     case bumps.PATCH: return {major: v.major, minor: v.minor, patch: v.patch+1};
     default: throw new Error(`Invalid bump: ${b}`);
+  }
+}
+
+function parseBoolean(value) {
+  switch (value.trim().toLowerCase()) {
+    case '1':
+    case 'true':
+    case 'yes':
+      return true;
+    case '0':
+    case 'false':
+    case 'no':
+      return false;
+    default:
+      throw new Error(`Invalid boolean input: ${value}`);
   }
 }
 
