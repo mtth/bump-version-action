@@ -1,0 +1,36 @@
+name: Bump version
+description: |
+  Bump version using semver and conventional commits.
+inputs:
+  token:
+    description: |
+      API token used to create version tags.
+    required: false
+    default: ${{ github.token }}
+  rules:
+    description: |
+      Newline-separated list of bump rules in the format
+      `<bump><space><kind><space><pattern>`.
+      `<bump>` can be `major`, `minor`, `patch`, `noop`,
+      `premajor:<release>`, `preminor:<release>`, or
+      `prepatch:<release>`.
+    required: false
+    default: |
+      minor type feat
+      patch type .*
+  ignore-breaking:
+    description: |
+      If true, ignore the breaking change marker (!) when deriving the bump.
+      The default is false, unless the version is pre-1.0.
+    required: false
+  prefix-filter:
+    description: |
+      Filter tags by stable semver prefix (for example `1`, `1.2`, or `1.2.3`).
+      This limits which refs are used to determine the latest version and sets
+      the fallback version when no matching tags exist. For exact filters like
+      `1.2.3`, matching prereleases (for example `v1.2.3-rc.2`) are included.
+    required: false
+    default: ""
+runs:
+  using: node20
+  main: index.js
